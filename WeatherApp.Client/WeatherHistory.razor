@@ -1,0 +1,71 @@
+@page "/weatherhistory"
+@inject HttpClient Http
+
+<h3>Weather Search History</h3>
+
+@if (history == null)
+{
+    <p>Loading history...</p>
+}
+else if (!history.Any())
+{
+    <p>No search history found.</p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>City</th>
+                <th>Temperature (°C)</th>
+                <th>Humidity (%)</th>
+                <th>Timestamp</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in history)
+            {
+                <tr>
+                    <td>@item.City</td>
+                    <td>@item.Temperature</td>
+                    <td>@item.Humidity</td>
+                    <td>@item.Timestamp.ToLocalTime()</td>
+                    <td><button class="btn btn-danger" @onclick="() => DeleteEntry(item.Id)">Delete</button></td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<WeatherHistoryEntry>? history;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadHistory();
+    }
+
+    private async Task LoadHistory()
+    {
+        history = await Http.GetFromJsonAsync<List<WeatherHistoryEntry>>("Weather/history");
+    }
+
+    private async Task DeleteEntry(string? id)
+    {
+        if (id != null)
+        {
+            await Http.DeleteAsync($"Weather/delete/{id}");
+            await LoadHistory();
+        }
+    }
+
+    public class WeatherHistoryEntry
+    {
+        public string? Id { get; set; }
+        public string City { get; set; } = string.Empty;
+        public double Temperature { get; set; }
+        public int Humidity { get; set; }
+        public DateTime Timestamp { get; set; }
+    }
+}

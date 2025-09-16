@@ -1,0 +1,178 @@
+@page "/auth"
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Routing
+@using Supabase.Gotrue
+@using Supabase
+@inject Supabase.Client Supabase
+@inject NavigationManager Nav
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+
+<!-- Page Layout -->
+<div class="auth-container">
+    <div class="auth-box">
+        <h2><i class="fas fa-lock"></i> Login / Register</h2>
+
+        @if (!string.IsNullOrWhiteSpace(ErrorMessage))
+        {
+            <p class="error">@ErrorMessage</p>
+        }
+
+        <label>Email:</label>
+        <input @bind="Email" type="email" placeholder="you@example.com" />
+
+        <label>Password:</label>
+        <input @bind="Password" type="password" placeholder="Enter password" />
+
+        <div class="auth-actions">
+            <button @onclick="Login">Login</button>
+            <button @onclick="Register">Register</button>
+            <button @onclick="Logout" class="logout">Logout</button>
+        </div>
+    </div>
+</div>
+
+<style>
+    body, html {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        font-family: 'Segoe UI', sans-serif;
+        background: url("/images/bg.jpg") no-repeat center center fixed;
+        background-size: cover;
+        color: white;
+        position: relative;
+    }
+
+    body::before {
+        content: "";
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100%;
+        width: 100%;
+        background: rgba(0, 0, 0, 0.45);
+        z-index: -1;
+        opacity: 0.3;
+    }
+
+    .auth-container {
+        height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .auth-box {
+        background: rgba(0, 0, 0, 0);
+        backdrop-filter: blur(8px);
+        padding: 32px;
+        border-radius: 16px;
+        box-shadow: 0 0 10px rgba(0,0,0,0.5);
+        width: 500px;
+        text-align: center;
+    }
+
+    .auth-box h2 {
+        margin-bottom: 24px;
+    }
+
+    .auth-box label {
+        display: block;
+        text-align: left;
+        font-size: 14px;
+        margin-top: 10px;
+        color: #f7f7f7;
+        font-weight: 600;
+    }
+
+    .auth-box input {
+        width: 100%;
+        padding: 10px;
+        margin-top: 6px;
+        margin-bottom: 12px;
+        border-radius: 8px;
+        border: none;
+        background-color: rgba(255,255,255,0.1);
+        color: rgb(35, 34, 34);
+        font-size: 14px;
+    }
+
+    .auth-actions {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+    }
+
+    .auth-actions button {
+        flex: 1;
+        padding: 8px;
+        border: none;
+        border-radius: 6px;
+        background-color: #014f8d;
+        color: white;
+        font-size: 13px;
+        cursor: pointer;
+    }
+
+    .auth-actions .logout {
+        background-color: #a94442;
+    }
+
+    .error {
+        color: #ffaaaa;
+        font-size: 13px;
+        margin-bottom: 12px;
+    }
+</style>
+
+@code {
+    private string Email = "";
+    private string Password = "";
+    private string ErrorMessage = "";
+
+    private async Task Register()
+    {
+        try
+        {
+            var session = await Supabase.Auth.SignUp(Email, Password);
+
+            if (session?.User != null)
+                ErrorMessage = "Registered! Check your email.";
+            else
+                ErrorMessage = "Registration failed.";
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = ex.Message;
+        }
+    }
+
+    private async Task Login()
+    {
+        try
+        {
+            var session = await Supabase.Auth.SignIn(Email, Password);
+
+            if (session?.User != null)
+            {
+                ErrorMessage = "";
+                Nav.NavigateTo("/home");
+            }
+            else
+            {
+                ErrorMessage = "Login failed. Try again.";
+            }
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = ex.Message;
+        }
+    }
+
+    private async Task Logout()
+    {
+        await Supabase.Auth.SignOut();
+        ErrorMessage = "Logged out successfully.";
+    }
+}

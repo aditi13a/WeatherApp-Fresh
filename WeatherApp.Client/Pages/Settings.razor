@@ -1,0 +1,202 @@
+@page "/settings"
+@inject NavigationManager Nav
+@inject IJSRuntime JS
+
+<div class="app-container @theme">
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <i class="fas fa-home" @onclick="@(() => Nav.NavigateTo("/home"))" title="Home"></i>
+        <i class="fas fa-cloud-sun" @onclick="@(() => Nav.NavigateTo("/weather"))" title="Weather"></i>
+        <i class="fas fa-star" @onclick="@(() => Nav.NavigateTo("/favorites"))" title="Favorites"></i>
+        <i class="fas fa-cog" style="color: #014f8d;" title="Settings"></i>
+    </div>
+
+    <!-- Main Section -->
+    <div class="main-section">
+        <div class="topbar">
+            <span><i class="fas fa-cog"></i> Settings</span>
+        </div>
+
+        <div class="settings-content">
+            <h2>⚙️ App Settings</h2>
+            <p>Here you can manage your preferences and settings.</p>
+
+            <ul>
+                <li>
+                    🎨 Theme: 
+                    <label class="switch">
+                        <input type="checkbox" @onchange="ToggleTheme" checked="@isDark" />
+                        <span class="slider round"></span>
+                    </label>
+                    <span>@(isDark ? "Dark" : "Light")</span>
+                </li>
+                <li>🔔 Notification Settings (coming soon)</li>
+                <li>👤 Profile Preferences</li>
+                <li>🛡️ Privacy & Security</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- FontAwesome -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+
+<style>
+    .settings-content {
+        padding: 40px;
+        font-size: 15px;
+        max-width: 600px;
+    }
+
+    .settings-content h2 {
+        margin-bottom: 20px;
+        font-size: 24px;
+    }
+
+    .settings-content ul {
+        list-style: none;
+        padding: 0;
+    }
+
+    .settings-content li {
+        padding: 10px 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    /* Toggle Switch */
+    .switch {
+        position: relative;
+        display: inline-block;
+        width: 50px;
+        height: 24px;
+        margin: 0 10px;
+    }
+
+    .switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+
+    .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #ccc;
+        transition: .4s;
+        border-radius: 34px;
+    }
+
+    .slider:before {
+        position: absolute;
+        content: "";
+        height: 18px;
+        width: 18px;
+        left: 3px;
+        bottom: 3px;
+        background-color: white;
+        transition: .4s;
+        border-radius: 50%;
+    }
+
+    input:checked + .slider {
+        background-color: #2196F3;
+    }
+
+    input:checked + .slider:before {
+        transform: translateX(26px);
+    }
+
+    /* Theme Classes */
+    .dark body, .dark .main-section, .dark .settings-content {
+        background-color: #121212;
+        color: white;
+    }
+
+    .light body, .light .main-section, .light .settings-content {
+        background-color: #f4f4f4;
+        color: #222;
+    }
+
+    /* Reuse existing app styles */
+    body, html {
+        margin: 0;
+        padding: 0;
+        font-family: 'Segoe UI', sans-serif;
+    }
+
+    .app-container {
+        display: flex;
+        height: 100vh;
+        overflow: hidden;
+    }
+
+    .sidebar {
+        width: 48px;
+        background-color: #21282d;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding-top: 12px;
+    }
+
+    .sidebar i {
+        font-size: 18px;
+        margin: 18px 0;
+        cursor: pointer;
+        color: white;
+        transition: transform 0.2s;
+    }
+
+    .sidebar i:hover {
+        transform: scale(1.2);
+        color: #014f8d;
+    }
+
+    .main-section {
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+        overflow-y: auto;
+    }
+
+    .topbar {
+        height: 48px;
+        background-color: #014f8d;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 16px;
+        font-size: 13px;
+        color: white;
+    }
+</style>
+
+@code {
+    private bool isDark = false;
+    private string theme = "light";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var savedTheme = await JS.InvokeAsync<string>("localStorage.getItem", "theme");
+        if (savedTheme == "dark")
+        {
+            isDark = true;
+            theme = "dark";
+        }
+    }
+
+    private async Task ToggleTheme(ChangeEventArgs e)
+    {
+        isDark = (bool)e.Value!;
+        theme = isDark ? "dark" : "light";
+        await JS.InvokeVoidAsync("localStorage.setItem", "theme", theme);
+        StateHasChanged();
+    }
+}

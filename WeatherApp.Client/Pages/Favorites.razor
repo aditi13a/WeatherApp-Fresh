@@ -1,0 +1,220 @@
+@page "/favorites"
+@inject HttpClient Http
+
+@inherits ProtectedPageBase
+
+
+<style>
+    body, html {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        font-family: 'Segoe UI', sans-serif;
+        background: url("/images/bg.jpg") no-repeat center center fixed;
+        background-size: cover;
+        color: white;
+        position: relative;
+    }
+
+    body::before {
+        content: "";
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100%;
+        width: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: -1;
+    }
+
+    .app-container {
+        display: flex;
+        height: 100vh;
+        font-family: 'Segoe UI', sans-serif;
+        color: #fff;
+        overflow: hidden;
+    }
+
+    .sidebar {
+        width: 48px;
+        background-color: #21282d;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding-top: 12px;
+    }
+
+    .sidebar i {
+        font-size: 18px;
+        margin: 18px 0;
+        cursor: pointer;
+        color: white;
+        transition: transform 0.2s;
+    }
+
+    .sidebar i:hover {
+        transform: scale(1.2);
+        color: #014f8d;
+    }
+
+    .main-section {
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .topbar {
+        height: 48px;
+        background-color: #014f8d;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 16px;
+        font-size: 13px;
+    }
+
+    .favorites-container {
+        padding: 30px;
+    }
+
+    .favorite-card {
+        background-color: rgba(255, 255, 255, 0.1);
+        margin: 10px auto;
+        padding: 12px 20px;
+        max-width: 500px;
+        border-radius: 12px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        backdrop-filter: blur(4px);
+        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    }
+
+    .favorite-left {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .city-name {
+        font-size: 16px;
+        font-weight: 500;
+    }
+
+    .temp-small {
+        font-size: 13px;
+        opacity: 0.8;
+    }
+
+    .favorite-card button {
+        background-color: transparent;
+        border: none;
+        color: #fff;
+        cursor: pointer;
+        font-size: 14px;
+    }
+
+    .favorite-card button:hover {
+        text-decoration: underline;
+    }
+</style>
+
+<div class="app-container">
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <i class="fas fa-home" @onclick="@(() => Nav.NavigateTo("/home"))" title="Home"></i>
+        <i class="fas fa-cloud-sun" @onclick="@(() => Nav.NavigateTo("/weather"))" title="Weather"></i>
+        <i class="fas fa-star" @onclick="@(() => Nav.NavigateTo("/favorites"))" title="Favorites"></i>
+        <i class="fas fa-cog" @onclick="@(() => Nav.NavigateTo("/settings"))" title="Settings"></i>
+    </div>
+
+
+    <!-- Main Panel -->
+    <div class="main-section">
+        <!-- Topbar -->
+        <div class="topbar">
+            <div><strong>Favorites</strong></div>
+            <div style="font-size: 12px;">Saved cities with temperatures</div>
+        </div>
+
+        <!-- Favorites Content -->
+        <div class="favorites-container">
+            @if (favorites.Count == 0)
+            {
+                <p>No favorites added yet.</p>
+            }
+            else
+            {
+                @foreach (var fav in favorites)
+                {
+                    var temp = cityTemperatures.ContainsKey(fav.City)
+                        ? cityTemperatures[fav.City].ToString("0.0")
+                        : "--";
+
+                    <div class="favorite-card">
+                        <div class="favorite-left">
+                            <span class="city-name">@fav.City</span>
+                            <span class="temp-small">@temp @(units == "metric" ? "°C" : "°F")</span>
+                        </div>
+                        <button @onclick="() => RemoveFavorite(fav.City)">
+                            <i class="fas fa-trash"></i> Remove
+                        </button>
+                    </div>
+                }
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<Favorite> favorites = new();
+    private Dictionary<string, double> cityTemperatures = new();
+    private string units = "metric"; // default: Celsius
+
+    protected override async Task OnInitializedAsync()
+    {
+        favorites = await Http.GetFromJsonAsync<List<Favorite>>("Favorites") ?? new();
+
+        foreach (var fav in favorites)
+        {
+            try
+            {
+                var response = await Http.GetFromJsonAsync<WeatherData>($"Weather?city={fav.City}&units={units}");
+                if (response != null)
+                {
+                    cityTemperatures[fav.City] = Math.Round(response.Main.Temp, 1);
+                }
+            }
+            catch
+            {
+                cityTemperatures[fav.City] = double.NaN;
+            }
+        }
+    }
+
+    private async Task RemoveFavorite(string city)
+    {
+        var response = await Http.PostAsJsonAsync("Favorites/remove", new { City = city });
+
+        if (response.IsSuccessStatusCode)
+        {
+            favorites.RemoveAll(f => f.City == city);
+            cityTemperatures.Remove(city);
+        }
+    }
+
+    public class Favorite
+    {
+        public string City { get; set; } = string.Empty;
+        public DateTime AddedAt { get; set; }
+    }
+
+    public class WeatherData
+    {
+        public MainData Main { get; set; } = new();
+    }
+
+    public class MainData
+    {
+        public double Temp { get; set; }
+    }
+}

@@ -1,0 +1,175 @@
+﻿@page "/home"
+@inherits ProtectedPageBase
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+
+<!-- Layout -->
+<div class="app-container">
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <i class="fas fa-home" @onclick="@(() => Nav.NavigateTo("/home"))" title="Home"></i>
+        <i class="fas fa-cloud-sun" @onclick="@(() => Nav.NavigateTo("/weather"))" title="Weather"></i>
+        <i class="fas fa-star" @onclick="@(() => Nav.NavigateTo("/favorites"))" title="Favorites"></i>
+        <i class="fas fa-sign-out-alt" @onclick="Logout" title="Logout"></i>
+    </div>
+
+    <!-- Main Section -->
+    <div class="main-section">
+        <!-- Topbar -->
+        <div class="topbar">
+            <span><i class="fas fa-user-circle"></i>&nbsp; Profile Dashboard</span>
+        </div>
+
+        <!-- Profile Content -->
+        <div class="profile-card">
+            @if (!string.IsNullOrEmpty(UserEmail))
+            {
+                <h1>Welcome Back 👋</h1>
+                <h3>@UserEmail</h3>
+                <p>You're logged in! You can now manage your favorites and check the weather.</p>
+                <button class="logout-button" @onclick="Logout">Logout</button>
+            }
+            else
+            {
+                <p>Loading profile...</p>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Styling -->
+<style>
+    body, html {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        font-family: 'Segoe UI', sans-serif;
+        background: url("/images/bg.jpg") no-repeat center center fixed;
+        background-size: cover;
+        color: white;
+    }
+
+    body::before {
+        content: "";
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100%;
+        width: 100%;
+        background: rgba(0, 0, 0, 0.45);
+        z-index: -1;
+        opacity: 0.3;
+    }
+
+    .app-container {
+        display: flex;
+        height: 100vh;
+        overflow: hidden;
+    }
+
+    .sidebar {
+        width: 48px;
+        background-color: #21282d;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding-top: 12px;
+    }
+
+    .sidebar i {
+        font-size: 18px;
+        margin: 18px 0;
+        cursor: pointer;
+        color: white;
+        transition: transform 0.2s;
+    }
+
+    .sidebar i:hover {
+        transform: scale(1.2);
+        color: #014f8d;
+    }
+
+    .main-section {
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+        overflow-y: auto;
+    }
+
+    .topbar {
+        height: 48px;
+        background-color: #014f8d;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 16px;
+        font-size: 14px;
+    }
+
+    .profile-card {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(8px);
+        padding: 30px;
+        margin: 100px auto;
+        border-radius: 16px;
+        text-align: center;
+        max-width: 400px;
+        box-shadow: 0 0 8px rgba(0, 0, 0, 0.3);
+    }
+
+    .profile-card h1 {
+        font-size: 28px;
+        margin-bottom: 10px;
+    }
+
+    .profile-card h3 {
+        margin: 0;
+        font-size: 16px;
+        font-weight: 600;
+    }
+
+    .profile-card p {
+        margin-top: 12px;
+        font-size: 14px;
+    }
+
+    .logout-button {
+        margin-top: 20px;
+        padding: 10px 20px;
+        font-size: 14px;
+        border: none;
+        border-radius: 8px;
+        background-color: #a94442;
+        color: white;
+        cursor: pointer;
+    }
+
+    .logout-button:hover {
+        background-color: #922b21;
+    }
+</style>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        await Task.CompletedTask;
+
+        var session = Supabase.Auth.CurrentSession;
+
+        if (session?.User?.Email != null)
+        {
+            UserEmail = session.User.Email;
+        }
+        else
+        {
+            Nav.NavigateTo("/auth");
+        }
+    }
+
+    private async Task Logout()
+    {
+        await Supabase.Auth.SignOut();
+        Nav.NavigateTo("/auth", forceLoad: true);
+    }
+}

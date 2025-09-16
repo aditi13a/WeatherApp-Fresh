@@ -1,0 +1,343 @@
+﻿@page "/"
+@page "/weather"
+@inherits ProtectedPageBase
+
+@inject HttpClient Http
+@inject IJSRuntime JS
+
+<!-- Styles -->
+<style>
+    body, html {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        font-family: 'Segoe UI', sans-serif;
+        background: url("/images/bg.jpg") no-repeat center center fixed;
+        background-size: cover;
+        color: white;
+        position: relative;
+    }
+
+    body::before {
+        content: "";
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100%;
+        width: 100%;
+        background: rgba(0, 0, 0, 0.45);
+        z-index: -1;
+        opacity: 0.3;
+    }
+
+    .app-container {
+        display: flex;
+        height: 100vh;
+        overflow: hidden;
+    }
+
+    .sidebar {
+        width: 48px;
+        background-color: #21282d;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding-top: 12px;
+    }
+
+    .sidebar i {
+        font-size: 18px;
+        margin: 18px 0;
+        cursor: pointer;
+        color: white;
+        transition: transform 0.2s;
+    }
+
+    .sidebar i:hover {
+        transform: scale(1.2);
+        color: #014f8d;
+    }
+
+    .main-section {
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+        overflow-y: auto;
+    }
+
+    .topbar {
+        height: 48px;
+        background-color: #014f8d;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 16px;
+        font-size: 13px;
+    }
+
+    .topbar-left, .topbar-right {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .topbar input {
+        padding: 5px 8px;
+        border-radius: 6px;
+        border: none;
+        width: 350px;
+        background-color: transparent;
+        color: white;
+        box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+        font-size: 13px;
+    }
+
+    .topbar button {
+        background-color: #014f8d;
+        border: none;
+        color: white;
+        font-size: 12px;
+        padding: 5px 8px;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+
+    .weather-summary {
+        text-align: center;
+        padding: 20px 0;
+    }
+
+    .weather-summary h1 {
+        font-size: 30px;
+        margin-bottom: 6px;
+    }
+
+    .weather-summary .condition {
+        font-size: 16px;
+        margin-bottom: 4px;
+    }
+
+    .forecast-row {
+        display: flex;
+        justify-content: center;
+        gap: 14px;
+        margin: 16px 0;
+    }
+
+    .forecast-box {
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 10px;
+        padding: 10px;
+        text-align: center;
+        width: 70px;
+        backdrop-filter: blur(6px);
+        font-size: 12px;
+    }
+
+    .detail-section {
+        display: flex;
+        justify-content: space-around;
+        background: rgba(255, 255, 255, 0.1);
+        padding: 16px;
+        border-radius: 12px;
+        margin: 20px;
+        color: #fff;
+        backdrop-filter: blur(6px);
+        font-size: 13px;
+    }
+</style>
+
+<!-- Layout -->
+<div class="app-container">
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <i class="fas fa-home" @onclick="@(() => Nav.NavigateTo("/home"))" title="Home"></i>
+        <i class="fas fa-cloud-sun" @onclick="@(() => Nav.NavigateTo("/weather"))" title="Weather"></i>
+        <i class="fas fa-star" @onclick="@(() => Nav.NavigateTo("/favorites"))" title="Favorites"></i>
+        <i class="fas fa-cog" @onclick="@(() => Nav.NavigateTo("/settings"))" title="Settings"></i>
+    </div>
+
+
+    <!-- Main Panel -->
+    <div class="main-section">
+        <!-- Topbar -->
+        <div class="topbar">
+            <div class="topbar-left">
+                <button @onclick="GetWeather">
+                    <i class="fas fa-sync-alt"></i>
+                </button>
+                <button @onclick="ToggleFavorite">
+                    <i class="fas fa-star"></i>
+                </button>
+            </div>
+            <div class="topbar-right">
+                <input @bind="city" placeholder="Search city..." />
+                <button @onclick="GetWeather">
+                    <i class="fas fa-search"></i>
+                </button>
+                <button @onclick="ToggleUnits" disabled="@string.IsNullOrWhiteSpace(city)">
+                    @(units == "metric" ? "°F" : "°C")
+                </button>
+            </div>
+        </div>
+
+        <!-- Weather Summary -->
+        <div class="weather-summary">
+            <h1>@weatherData?.Name</h1>
+            <div class="condition">@weatherData?.Weather[0].Description</div>
+            <div style="font-size: 42px; font-weight: bold;">
+                @ConvertTemp(weatherData?.Main.Temp ?? 0) @(units == "metric" ? "°C" : "°F")
+            </div>
+            <p>Feels like: @ConvertTemp(weatherData?.Main.Feels_like ?? 0) @(units == "metric" ? "°C" : "°F")</p>
+            <p>Humidity: @weatherData?.Main.Humidity%, Wind: @weatherData?.Wind.Speed @(units == "metric" ? "km/h" : "mph")</p>
+        </div>
+
+        <!-- Forecast -->
+        <div class="forecast-row">
+            @foreach (var forecast in dummyForecast)
+            {
+                <div class="forecast-box">
+                    <p>@forecast.Day</p>
+                    <img src="@forecast.Icon" width="36" />
+                    <p>@forecast.Description</p>
+                    <strong>@ConvertTemp(double.Parse(forecast.Temp)) @(units == "metric" ? "°C" : "°F")</strong>
+                </div>
+            }
+        </div>
+
+        <!-- Day Details -->
+        <div class="detail-section">
+            <div><strong>Sunrise:</strong><br />@DateTimeOffset.FromUnixTimeSeconds(weatherData?.Sys.Sunrise ?? 0).ToLocalTime().ToString("hh:mm tt")</div>
+            <div><strong>Humidity:</strong><br />@weatherData?.Main.Humidity%</div>
+            <div><strong>UV Index:</strong><br />4</div>
+            <div><strong>Max Wind:</strong><br />@weatherData?.Wind.Speed @(units == "metric" ? "km/h" : "mph")</div>
+        </div>
+    </div>
+</div>
+
+<!-- FontAwesome CDN -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+
+@code {
+    private string city = string.Empty;
+    private string units = "metric";
+    private WeatherResponse? weatherData;
+    private string error = string.Empty;
+
+    private async Task ToggleUnits()
+    {
+        units = (units == "metric") ? "imperial" : "metric";
+        await GetWeather();
+    }
+
+    private double ConvertTemp(double temp)
+    {
+        return units == "metric" ? temp : Math.Round(temp * 9 / 5 + 32, 1);
+    }
+
+    private async Task GetWeather()
+    {
+        error = "";
+        weatherData = null;
+
+        if (string.IsNullOrWhiteSpace(city))
+        {
+            error = "Please enter a valid city.";
+            return;
+        }
+
+        try
+        {
+            weatherData = await Http.GetFromJsonAsync<WeatherResponse>($"Weather?city={city}&units={units}");
+        }
+        catch (Exception ex)
+        {
+            error = $"Error: {ex.Message}";
+        }
+    }
+
+private async Task ToggleFavorite()
+{
+    if (!string.IsNullOrWhiteSpace(city))
+    {
+        try
+        {
+            var favorite = new Favorite { City = city };
+            var response = await Http.PostAsJsonAsync("favorites/toggle", favorite);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<ToggleResponse>();
+                string message = result?.Removed == true
+                    ? $"{city} removed from favorites."
+                    : $"{city} added to favorites.";
+                await JS.InvokeVoidAsync("alert", message);
+            }
+            else
+            {
+                var msg = await response.Content.ReadAsStringAsync();
+                error = $"Server error: {msg}";
+            }
+        }
+        catch (Exception ex)
+        {
+            error = "Toggle favorite failed: " + ex.Message;
+        }
+    }
+    else
+    {
+        error = "No city to favorite!";
+    }
+}
+
+public class ToggleResponse
+{
+    public bool Removed { get; set; }
+}
+
+public class Favorite
+{
+    public string Id { get; set; } = string.Empty;
+    public string City { get; set; } = string.Empty;
+    public DateTime AddedAt { get; set; }
+}
+
+
+
+
+    public class ForecastDay
+    {
+        public string Day { get; set; }
+        public string Temp { get; set; }
+        public string Description { get; set; }
+        public string Icon { get; set; }
+
+        public ForecastDay(string day, string temp, string desc, string icon)
+        {
+            Day = day; Temp = temp; Description = desc; Icon = icon;
+        }
+    }
+
+    private List<ForecastDay> dummyForecast = new()
+    {
+        new ForecastDay("Thu", "23", "Mostly Cloudy", "https://openweathermap.org/img/wn/03d.png"),
+        new ForecastDay("Fri", "15", "Cloudy", "https://openweathermap.org/img/wn/04d.png"),
+        new ForecastDay("Sat", "21", "Partly Sunny", "https://openweathermap.org/img/wn/02d.png"),
+        new ForecastDay("Sun", "24", "Sunny", "https://openweathermap.org/img/wn/01d.png"),
+        new ForecastDay("Mon", "17", "Cloudy", "https://openweathermap.org/img/wn/04d.png")
+    };
+
+    public class WeatherResponse
+    {
+        public MainData Main { get; set; } = new();
+        public string Name { get; set; } = string.Empty;
+        public List<WeatherInfo> Weather { get; set; } = new();
+        public WindData Wind { get; set; } = new();
+        public Sys Sys { get; set; } = new();
+    }
+
+    public class MainData { public double Temp { get; set; } public double Feels_like { get; set; } public int Humidity { get; set; } }
+    public class WeatherInfo { public string Description { get; set; } = string.Empty; public string Icon { get; set; } = string.Empty; }
+    public class WindData { public double Speed { get; set; } }
+    public class Sys { public long Sunrise { get; set; } }
+}

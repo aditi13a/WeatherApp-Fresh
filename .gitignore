@@ -1,0 +1,15 @@
+# Ignore build output
+bin/
+obj/
+wwwroot/
+node_modules/
+dist/
+
+# Ignore IDE settings
+.vscode/
+*.user
+*.suo
+
+# Ignore system files
+*.log
+*.DS_Store
