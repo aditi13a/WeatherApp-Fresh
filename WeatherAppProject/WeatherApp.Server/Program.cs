@@ -1,8 +1,6 @@
 using WeatherApp.Server.Settings;
 using WeatherApp.Server.Services;
 using Supabase;
-using System;
-
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -44,11 +42,6 @@ builder.Services.AddCors(options =>
               .AllowAnyHeader();
     });
 });
-
-// Render requires us to bind to the PORT environment variable
-var port = Environment.GetEnvironmentVariable("PORT") ?? "10000";
-builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
-
 
 var app = builder.Build();
 
