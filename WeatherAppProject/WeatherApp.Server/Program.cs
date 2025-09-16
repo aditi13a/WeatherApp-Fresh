@@ -2,26 +2,24 @@ using WeatherApp.Server.Settings;
 using WeatherApp.Server.Services;
 using Supabase;
 
-
 var builder = WebApplication.CreateBuilder(args);
 
 // Add MongoDbSettings configuration binding
 builder.Services.Configure<MongoDbSettings>(builder.Configuration.GetSection("MongoDbSettings"));
 
-// Register WeatherHistoryService
+// Register services
 builder.Services.AddSingleton<WeatherHistoryService>();
-// Register FavoritesService
 builder.Services.AddSingleton<FavoritesService>();
 
-// Add services to the container.
-builder.Services.AddControllers(); // <-- Add this to enable your WeatherController
+// Add services to the container
+builder.Services.AddControllers(); // <-- Enables WeatherController
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddHttpClient();
 
 builder.Services.AddSingleton(provider =>
 {
-    var url = " https://gqvdbvqaimnjvwwerpio.supabase.co ";
+    var url = "https://gqvdbvqaimnjvwwerpio.supabase.co";
     var key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdxdmRidnFhaW1uanZ3d2VycGlvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE1MzA4ODAsImV4cCI6MjA2NzEwNjg4MH0.iZ0AxhK53q2DFalSLVSJHvbLqRovAqCvq8REtgXB6iE";
 
     var options = new SupabaseOptions
@@ -43,9 +41,13 @@ builder.Services.AddCors(options =>
     });
 });
 
+// Get port from Render environment variable
+var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
+builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -53,14 +55,11 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors("AllowAll");
-
 app.UseHttpsRedirection();
-
 app.UseAuthorization();
-
 app.MapControllers();
 
-// Optional: Keep weatherforecast endpoint if you want to test
+// Optional test endpoint
 var summaries = new[]
 {
     "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
