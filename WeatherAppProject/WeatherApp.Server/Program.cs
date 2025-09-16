@@ -1,7 +1,3 @@
-using WeatherApp.Server.Settings;
-using WeatherApp.Server.Services;
-using Supabase;
-
 var builder = WebApplication.CreateBuilder(args);
 
 // Add MongoDbSettings configuration binding
@@ -11,8 +7,7 @@ builder.Services.Configure<MongoDbSettings>(builder.Configuration.GetSection("Mo
 builder.Services.AddSingleton<WeatherHistoryService>();
 builder.Services.AddSingleton<FavoritesService>();
 
-// Add services to the container
-builder.Services.AddControllers(); // <-- Enables WeatherController
+builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddHttpClient();
@@ -20,46 +15,42 @@ builder.Services.AddHttpClient();
 builder.Services.AddSingleton(provider =>
 {
     var url = "https://gqvdbvqaimnjvwwerpio.supabase.co";
-    var key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdxdmRidnFhaW1uanZ3d2VycGlvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE1MzA4ODAsImV4cCI6MjA2NzEwNjg4MH0.iZ0AxhK53q2DFalSLVSJHvbLqRovAqCvq8REtgXB6iE";
+    var key = "<your_supabase_key>";
 
-    var options = new SupabaseOptions
-    {
-        AutoRefreshToken = true
-    };
-
-    var supabaseClient = new Supabase.Client(url, key, options);
-    return supabaseClient;
+    var options = new SupabaseOptions { AutoRefreshToken = true };
+    return new Supabase.Client(url, key, options);
 });
 
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
     {
-        policy.AllowAnyOrigin()
-              .AllowAnyMethod()
-              .AllowAnyHeader();
+        policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader();
     });
 });
 
-// Get port from Render environment variable
-var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
-builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
-
 var app = builder.Build();
 
-// Configure the HTTP request pipeline
+// Middleware
+app.UseCors("AllowAll");
+
+// ⚡ Serve Blazor Client static files
+app.UseStaticFiles();
+
+app.UseRouting();
+
+// Only use HTTPS redirection locally
 if (app.Environment.IsDevelopment())
 {
+    app.UseHttpsRedirection();
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
-app.UseCors("AllowAll");
-app.UseHttpsRedirection();
 app.UseAuthorization();
 app.MapControllers();
 
-// Optional test endpoint
+// Optional WeatherForecast endpoint
 var summaries = new[]
 {
     "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
